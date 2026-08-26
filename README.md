@@ -48,13 +48,14 @@ Do **not** use Elastic Agent / Fleet for this path unless you already host a loc
 
 Internal Elasticsearch monitoring is deprecated and scheduled for removal in **10.0**. It remains valid on 8.14–8.18 and 9.x. Pin **8.18.4** (or same-minor Kibana) for current on-prem; stay on 8.x/9.x if you rely on `.monitoring-es-*` without Agent.
 
-See `VERSION` in the repo root.
+See `VERSION` and `ONPREM.md` in the repo root.
 
 ## Repository layout
 
 | Path | Purpose |
 |---|---|
 | `VERSION` | Pinned dashboard + Elasticsearch versions for on-prem / air-gapped. |
+| `ONPREM.md` | Air-gapped on-prem runbook (ES 8.14.0+ / verified 8.18.4). |
 | `queries/daily_ingest_8.14_unified.json` | Preferred Dev Tools query when both collections exist. Runtime fields unify internal collection and Elastic Agent. |
 | `queries/daily_ingest_internal.json` | `.monitoring-es-*` only (`type=index_stats`). |
 | `queries/daily_ingest_agent.json` | Elastic Agent `metrics-elasticsearch.stack_monitoring.index-*` only. |
@@ -89,14 +90,17 @@ Change `now-31d/d` and `time_zone` as needed.
 
 ## Cluster-side script
 
-For a private 8.14.0+ cluster (no public URL required):
+On-prem / no internet — use internal collection:
 
 ```bash
 export ES_URL=https://es.example.com:9200
 export ES_API_KEY='...'          # or ES_USER / ES_PASSWORD
+export ES_COLLECTION=internal
 chmod +x scripts/daily_ingest_from_monitoring.sh
 ./scripts/daily_ingest_from_monitoring.sh 30 UTC
 ```
+
+`ES_COLLECTION=auto` (default) runs the 8.14 unified query against both `.monitoring-es-*` and Agent data streams. `ES_COLLECTION=agent` is Agent-only.
 
 Optional: `ES_MONITORING_PATTERN` to override the index pattern.
 
