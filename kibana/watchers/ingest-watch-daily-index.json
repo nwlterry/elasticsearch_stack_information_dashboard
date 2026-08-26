@@ -1,0 +1,24 @@
+{
+  "index_patterns": ["ingest-watch-daily"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "day": { "type": "date", "format": "strict_date||strict_date_optional_time" },
+        "index_name": { "type": "keyword" },
+        "stream_family": { "type": "keyword" },
+        "scope": { "type": "keyword" },
+        "max_primary_bytes": { "type": "long" },
+        "max_docs": { "type": "long" },
+        "ingest_bytes": { "type": "long" },
+        "prev_primary_bytes": { "type": "long" },
+        "source": { "type": "keyword" },
+        "collection": { "type": "keyword" }
+      }
+    }
+  }
+}
