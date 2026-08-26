@@ -1,0 +1,13 @@
+// ES|QL — daily max primary store per monitored index (internal collection)
+// Kibana Discover → ES|QL. Adjust time picker to last 30–90 days.
+// RAW peak store series (not yet day-over-day ingest).
+
+FROM .monitoring-es-*
+| WHERE type == "index_stats"
+  AND index_stats.primaries.store.size_in_bytes IS NOT NULL
+  AND index_stats.index IS NOT NULL
+| EVAL day = DATE_TRUNC(1 day, timestamp)
+| STATS max_primary_bytes = MAX(index_stats.primaries.store.size_in_bytes),
+        max_docs = MAX(index_stats.primaries.docs.count)
+    BY index_stats.index, day
+| SORT day ASC, max_primary_bytes DESC
