@@ -52,7 +52,7 @@ if [[ ! -f "$QUERY_FILE" ]]; then
   exit 1
 fi
 
-echo "dashboard=1.0.0 es_min=8.14.0 collection=${COLLECTION} pattern=${PATTERN} query=$(basename "$QUERY_FILE")" >&2
+echo "dashboard=1.0.1 es_min=8.14.0 collection=${COLLECTION} pattern=${PATTERN} query=$(basename "$QUERY_FILE")" >&2
 
 AUTH=()
 if [[ -n "${ES_API_KEY:-}" ]]; then
@@ -64,7 +64,11 @@ else
   exit 1
 fi
 
-BODY=$(python3 - "$QUERY_FILE" "$DAYS" "$TZ_NAME" <<'PY'
+REQ_FILE=$(mktemp)
+RESP_FILE=$(mktemp)
+trap 'rm -f "$REQ_FILE" "$RESP_FILE"' EXIT
+
+python3 - "$QUERY_FILE" "$DAYS" "$TZ_NAME" <<'PY' >"$REQ_FILE"
 import json, sys
 path, days, tz = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(path) as f:
@@ -88,24 +92,35 @@ def patch(node):
 patch(body)
 json.dump(body, sys.stdout)
 PY
-)
 
 ENCODED_PATTERN=$(python3 -c "import urllib.parse,sys; print(','.join(urllib.parse.quote(p, safe='*-.') for p in sys.argv[1].split(',')))" "$PATTERN")
 
-RESP=$(curl -sS -X POST "${ES_URL}/${ENCODED_PATTERN}/_search?ignore_unavailable=true&allow_no_indices=true" \
+HTTP_CODE=$(curl -sS -o "$RESP_FILE" -w "%{http_code}" -X POST \
+  "${ES_URL}/${ENCODED_PATTERN}/_search?ignore_unavailable=true&allow_no_indices=true" \
   -H "Content-Type: application/json" \
   "${AUTH[@]}" \
-  -d "$BODY")
+  --data-binary @"$REQ_FILE")
 
-python3 - <<'PY' "$RESP"
+echo "http=${HTTP_CODE} response_bytes=$(wc -c < "$RESP_FILE" | tr -d ' ')" >&2
+
+python3 - "$RESP_FILE" "$HTTP_CODE" <<'PY'
 import json, sys
-raw = sys.argv[1]
-data = json.loads(raw)
-if "error" in data:
-    print(json.dumps(data["error"], indent=2))
+
+path, http_code = sys.argv[1], sys.argv[2]
+try:
+    with open(path) as f:
+        data = json.load(f)
+except ValueError as exc:
+    sys.stderr.write("Elasticsearch did not return JSON (HTTP %s): %s\n" % (http_code, exc))
     sys.exit(1)
+
+if http_code != "200" or "error" in data:
+    err = data.get("error", data)
+    print(json.dumps(err, indent=2) if not isinstance(err, str) else err)
+    sys.exit(1)
+
 indices = data.get("aggregations", {}).get("indices", {}).get("buckets", [])
-print(f"{'date':<12} {'index':<48} {'store_max_bytes':>16} {'docs_max':>12}")
+print("%-12s %-48s %16s %12s" % ("date", "index", "store_max_bytes", "docs_max"))
 rows = []
 for idx in indices:
     name = idx.get("key", "")
@@ -115,7 +130,6 @@ for idx in indices:
         docs = (day.get("max_docs") or {}).get("value") or 0
         rows.append((name, date, size, docs))
 
-# day-over-day ingest per index
 from collections import defaultdict
 series = defaultdict(list)
 for name, date, size, docs in rows:
@@ -131,8 +145,8 @@ for name, points in series.items():
         prev = size
 
 print("--- daily cluster ingest (primary store delta, 8.14.0+) ---")
-print(f"{'date':<12} {'bytes':>16} {'GiB':>10}")
+print("%-12s %16s %10s" % ("date", "bytes", "GiB"))
 for date in sorted(ingest):
     b = ingest[date]
-    print(f"{date:<12} {int(b):>16} {b/1024**3:10.2f}")
+    print("%-12s %16d %10.2f" % (date, int(b), b / 1024**3))
 PY

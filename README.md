@@ -3,7 +3,7 @@
 Daily ingest size from **Stack Monitoring** index stats.
 
 **Supported versions: Elasticsearch 8.14.0 and later** (8.14–8.18, 9.x).
-Dashboard release: **1.0.0**. On-prem / air-gapped pin: **Elasticsearch 8.14.0+** with internal collection `.monitoring-es-*` (verified **8.18.4**).
+Dashboard release: **1.0.1**. On-prem / air-gapped pin: **Elasticsearch 8.14.0+** with internal collection `.monitoring-es-*` (verified **8.18.4**).
 
 The dashboard computes calendar-day ingest as the day-over-day increase in **primary** store size, floored at zero so ILM deletes and shrinks do not look like negative ingest. Replica copies are excluded.
 
@@ -13,7 +13,7 @@ This is the path for a self-managed cluster with no Elastic Cloud, no package do
 
 | Item | Version / value |
 |---|---|
-| Dashboard | **1.0.0** |
+| Dashboard | **1.0.1** |
 | Elasticsearch | **8.14.0 minimum**, verified **8.18.4**, also 8.14–8.18 and 9.x |
 | Kibana | Same version as Elasticsearch |
 | Collection | **Internal** (built into Elasticsearch) or **Metricbeat** xpack. Both write `.monitoring-es-*`. |

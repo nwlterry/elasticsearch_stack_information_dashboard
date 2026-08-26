@@ -1,10 +1,10 @@
 # On-prem air-gapped version
 
-**Dashboard 1.0.0** for self-managed Elasticsearch **without internet**.
+**Dashboard 1.0.1** for self-managed Elasticsearch **without internet**.
 
 | Pin | Value |
 |---|---|
-| Dashboard | 1.0.0 |
+| Dashboard | 1.0.1 |
 | Elasticsearch | **8.14.0** minimum, verified **8.18.4** |
 | Also supported | 8.14–8.18 and 9.x |
 | Kibana | Same version as Elasticsearch |
@@ -41,6 +41,6 @@ Or in Kibana Dev Tools, run `queries/daily_ingest_internal.json` against `.monit
 
 ## Copy to an air-gapped site
 
-Download the on-prem zip from the [v1.0.0 release](https://github.com/nwlterry/elasticsearch_stack_information_dashboard/releases/tag/v1.0.0) on a connected machine, then copy it in. The zip contains `VERSION`, this runbook, the three queries, and the script. It does not need Node.js or npm.
+Download the on-prem zip from the [v1.0.1 release](https://github.com/nwlterry/elasticsearch_stack_information_dashboard/releases/tag/v1.0.1) on a connected machine, then copy it in. The zip contains `VERSION`, this runbook, the three queries, and the script. It does not need Node.js or npm.
 
 Internal monitoring is removed in Elasticsearch **10.0**. Stay on 8.x or 9.x for this path.
