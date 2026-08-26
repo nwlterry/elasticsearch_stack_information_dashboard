@@ -1,0 +1,73 @@
+{
+  "size": 0,
+  "track_total_hits": false,
+  "timeout": "15s",
+  "runtime_mappings": {
+    "ingest.index": {
+      "type": "keyword",
+      "script": "if (doc.containsKey('elasticsearch.index.name') && doc['elasticsearch.index.name'].size() != 0) { emit(doc['elasticsearch.index.name'].value); } else if (doc.containsKey('index_stats.index') && doc['index_stats.index'].size() != 0) { emit(doc['index_stats.index'].value); }"
+    },
+    "ingest.size_bytes": {
+      "type": "long",
+      "script": "if (doc.containsKey('elasticsearch.index.primaries.store.size_in_bytes') && doc['elasticsearch.index.primaries.store.size_in_bytes'].size() != 0) { emit((long)doc['elasticsearch.index.primaries.store.size_in_bytes'].value); } else if (doc.containsKey('index_stats.primaries.store.size_in_bytes') && doc['index_stats.primaries.store.size_in_bytes'].size() != 0) { emit((long)doc['index_stats.primaries.store.size_in_bytes'].value); }"
+    },
+    "ingest.docs": {
+      "type": "long",
+      "script": "if (doc.containsKey('elasticsearch.index.primaries.docs.count') && doc['elasticsearch.index.primaries.docs.count'].size() != 0) { emit((long)doc['elasticsearch.index.primaries.docs.count'].value); } else if (doc.containsKey('index_stats.primaries.docs.count') && doc['index_stats.primaries.docs.count'].size() != 0) { emit((long)doc['index_stats.primaries.docs.count'].value); }"
+    },
+    "ingest.ts": {
+      "type": "date",
+      "script": "if (doc.containsKey('@timestamp') && doc['@timestamp'].size() != 0) { emit(doc['@timestamp'].value.toInstant().toEpochMilli()); } else if (doc.containsKey('timestamp') && doc['timestamp'].size() != 0) { emit(doc['timestamp'].value.toInstant().toEpochMilli()); }"
+    }
+  },
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "bool": {
+            "should": [
+              { "term": { "type": "index_stats" } },
+              { "term": { "data_stream.dataset": "elasticsearch.stack_monitoring.index" } },
+              { "exists": { "field": "elasticsearch.index.name" } },
+              { "exists": { "field": "index_stats.index" } }
+            ],
+            "minimum_should_match": 1
+          }
+        },
+        {
+          "bool": {
+            "should": [
+              { "range": { "timestamp": { "gte": "now-31d/d", "lte": "now" } } },
+              { "range": { "@timestamp": { "gte": "now-31d/d", "lte": "now" } } }
+            ],
+            "minimum_should_match": 1
+          }
+        }
+      ]
+    }
+  },
+  "aggs": {
+    "indices": {
+      "terms": {
+        "field": "ingest.index",
+        "size": 800,
+        "order": { "peak_size": "desc" }
+      },
+      "aggs": {
+        "peak_size": { "max": { "field": "ingest.size_bytes" } },
+        "by_day": {
+          "date_histogram": {
+            "field": "ingest.ts",
+            "calendar_interval": "1d",
+            "min_doc_count": 1,
+            "time_zone": "UTC"
+          },
+          "aggs": {
+            "max_size": { "max": { "field": "ingest.size_bytes" } },
+            "max_docs": { "max": { "field": "ingest.docs" } }
+          }
+        }
+      }
+    }
+  }
+}
