@@ -1,0 +1,53 @@
+{
+  "source": {
+    "index": [".monitoring-es-*"],
+    "query": {
+      "bool": {
+        "filter": [
+          { "term": { "type": "index_stats" } },
+          { "exists": { "field": "index_stats.index" } },
+          { "exists": { "field": "index_stats.primaries.store.size_in_bytes" } }
+        ]
+      }
+    }
+  },
+  "dest": {
+    "index": "monitoring-ingest-daily"
+  },
+  "frequency": "1h",
+  "sync": {
+    "time": {
+      "field": "timestamp",
+      "delay": "60s"
+    }
+  },
+  "pivot": {
+    "group_by": {
+      "day": {
+        "date_histogram": {
+          "field": "timestamp",
+          "calendar_interval": "1d",
+          "time_zone": "UTC"
+        }
+      },
+      "index_name": {
+        "terms": {
+          "field": "index_stats.index"
+        }
+      }
+    },
+    "aggregations": {
+      "max_primary_bytes": {
+        "max": {
+          "field": "index_stats.primaries.store.size_in_bytes"
+        }
+      },
+      "max_docs": {
+        "max": {
+          "field": "index_stats.primaries.docs.count"
+        }
+      }
+    }
+  },
+  "description": "Daily max primary store size per index from internal Stack Monitoring (index_stats). Used as capacity/peak series; true ingest = positive day-over-day of max_primary_bytes (TSVB derivative or script)."
+}

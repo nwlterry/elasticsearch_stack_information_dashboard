@@ -1,0 +1,12 @@
+// ES|QL — sum of per-index daily max primary store (NOT ingest delta)
+// Capacity-style chart of how large primaries are at day peak.
+// True ingest = positive day-over-day of per-index max; use TSVB or script.
+
+FROM .monitoring-es-*
+| WHERE type == "index_stats"
+  AND index_stats.primaries.store.size_in_bytes IS NOT NULL
+| EVAL day = DATE_TRUNC(1 day, timestamp)
+| STATS max_primary_bytes = MAX(index_stats.primaries.store.size_in_bytes)
+    BY index_stats.index, day
+| STATS total_peak_primary_bytes = SUM(max_primary_bytes) BY day
+| SORT day ASC
