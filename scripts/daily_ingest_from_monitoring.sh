@@ -7,18 +7,40 @@
 #   export ES_URL=https://es.example.com:9200
 #   export ES_API_KEY='base64-id-key'          # preferred
 #   # or: export ES_USER=elastic ES_PASSWORD=...
+#   # Air-gapped on-prem (no Elastic Agent / no internet):
+#   export ES_COLLECTION=internal
 #   ./scripts/daily_ingest_from_monitoring.sh [days] [timezone]
 #
 # Defaults: 30 days, UTC
+# ES_COLLECTION: auto (unified 8.14) | internal | agent
 # Index pattern:
-#   .monitoring-es-*,metrics-elasticsearch.stack_monitoring.index-*
+#   auto     .monitoring-es-*,metrics-elasticsearch.stack_monitoring.index-*
+#   internal .monitoring-es-*
+#   agent    metrics-elasticsearch.stack_monitoring.index-*
 
 set -euo pipefail
 
 DAYS="${1:-30}"
 TZ_NAME="${2:-UTC}"
-PATTERN="${ES_MONITORING_PATTERN:-.monitoring-es-*,metrics-elasticsearch.stack_monitoring.index-*}"
-QUERY_FILE="$(cd "$(dirname "$0")/.." && pwd)/queries/daily_ingest_8.14_unified.json"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+COLLECTION="${ES_COLLECTION:-auto}"
+
+case "$COLLECTION" in
+  internal)
+    DEFAULT_PATTERN=".monitoring-es-*"
+    QUERY_FILE="$ROOT/queries/daily_ingest_internal.json"
+    ;;
+  agent|beats)
+    DEFAULT_PATTERN="metrics-elasticsearch.stack_monitoring.index-*"
+    QUERY_FILE="$ROOT/queries/daily_ingest_agent.json"
+    ;;
+  auto|unified|*)
+    DEFAULT_PATTERN=".monitoring-es-*,metrics-elasticsearch.stack_monitoring.index-*"
+    QUERY_FILE="$ROOT/queries/daily_ingest_8.14_unified.json"
+    ;;
+esac
+
+PATTERN="${ES_MONITORING_PATTERN:-$DEFAULT_PATTERN}"
 
 if [[ -z "${ES_URL:-}" ]]; then
   echo "ES_URL is required" >&2
@@ -29,6 +51,8 @@ if [[ ! -f "$QUERY_FILE" ]]; then
   echo "Query file not found: $QUERY_FILE" >&2
   exit 1
 fi
+
+echo "dashboard=1.0.0 es_min=8.14.0 collection=${COLLECTION} pattern=${PATTERN} query=$(basename "$QUERY_FILE")" >&2
 
 AUTH=()
 if [[ -n "${ES_API_KEY:-}" ]]; then

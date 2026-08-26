@@ -8,6 +8,7 @@ import { buildDemoDataset } from "@/lib/demo-data";
 import { filterFamilies, periodStats } from "@/lib/ingest";
 import { utcToday } from "@/lib/format";
 import { DEFAULT_MONITORING_PATTERN } from "@/lib/es-queries";
+import { DASHBOARD_VERSION } from "@/lib/version";
 import type {
   ConnectionConfig,
   DataMode,
@@ -99,6 +100,7 @@ export function Dashboard() {
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Badge variant={badge.variant}>{badge.label}</Badge>
               <Badge variant="outline">ES 8.14.0+</Badge>
+              <Badge variant="outline">v{DASHBOARD_VERSION}</Badge>
               <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                 <Database className="size-3.5 shrink-0" />
                 <span className="truncate font-mono">{source.cluster.name}</span>

@@ -1,4 +1,6 @@
+export const DASHBOARD_VERSION = "1.0.0";
 export const MIN_ES_VERSION = "8.14.0";
+export const VERIFIED_ES_VERSION = "8.18.4";
 
 export function parseVersion(raw: string | undefined): string {
   if (!raw) return "unknown";
