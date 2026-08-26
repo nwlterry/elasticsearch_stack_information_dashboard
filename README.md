@@ -1,0 +1,1 @@
+# elasticsearch_stack_information_dashboard
