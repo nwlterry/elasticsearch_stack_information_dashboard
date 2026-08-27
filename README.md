@@ -3,7 +3,7 @@
 Daily ingest size from **Stack Monitoring** index stats.
 
 **Supported versions: Elasticsearch 8.14.0 and later** (8.14–8.18, 9.x).  
-Dashboard release: **1.0.2**. On-prem / air-gapped pin: **Elasticsearch 8.14.0+** with internal collection `.monitoring-es-*` (verified **8.18.4**).
+Dashboard release: **1.0.3**. On-prem / air-gapped pin: **Elasticsearch 8.14.0+** with internal collection `.monitoring-es-*` (verified **8.18.4**).
 
 Start here for a map of every update: **[UPDATES.md](UPDATES.md)** · history: **[CHANGELOG.md](CHANGELOG.md)**
 
@@ -15,7 +15,7 @@ This is the path for a self-managed cluster with no Elastic Cloud, no package do
 
 | Item | Version / value |
 |---|---|
-| Dashboard | **1.0.2** |
+| Dashboard | **1.0.3** |
 | Elasticsearch | **8.14.0 minimum**, verified **8.18.4**, also 8.14–8.18 and 9.x |
 | Kibana | Same version as Elasticsearch |
 | Collection | **Internal** (built into Elasticsearch) or **Metricbeat** xpack. Both write `.monitoring-es-*`. |
@@ -24,6 +24,7 @@ This is the path for a self-managed cluster with no Elastic Cloud, no package do
 | Script | `scripts/daily_ingest_from_monitoring.sh` (1.0.1+ temp-file parse) |
 | Script runtime | bash, curl, python3 ≥ 3.6 (RHEL 8 default is enough) |
 | Kibana package | `kibana/` (optional; Watcher Path D for Lens) |
+| Kibana-only guide | [`kibana/docs/kibana-only-airgapped-setup.md`](kibana/docs/kibana-only-airgapped-setup.md) |
 
 Internal collection is enabled on the cluster (no extra binaries):
 
@@ -58,7 +59,7 @@ See `VERSION` and `ONPREM.md` in the repo root.
 | Path | Purpose |
 |---|---|
 | `UPDATES.md` | Organized index of all updates and which tool to use. |
-| `CHANGELOG.md` | Version history (1.0.0 → 1.0.2). |
+| `CHANGELOG.md` | Version history (1.0.0 → 1.0.3). |
 | `VERSION` | Pinned dashboard + Elasticsearch versions for on-prem / air-gapped. |
 | `ONPREM.md` | Air-gapped on-prem runbook (ES 8.14.0+ / verified 8.18.4). |
 | `queries/daily_ingest_8.14_unified.json` | Preferred Dev Tools query when both collections exist. Runtime fields unify internal collection and Elastic Agent. |
@@ -66,6 +67,7 @@ See `VERSION` and `ONPREM.md` in the repo root.
 | `queries/daily_ingest_agent.json` | Elastic Agent `metrics-elasticsearch.stack_monitoring.index-*` only. |
 | `scripts/daily_ingest_from_monitoring.sh` | Cluster-side script: search + day-over-day GiB table. |
 | `kibana/` | Kibana-native package (ES|QL, TSVB, transform, Watcher → Lens). |
+| `kibana/docs/kibana-only-airgapped-setup.md` | Kibana-only air-gapped operator runbook. |
 | `src/components/dashboard/` | Ingest Watch UI (KPIs, stacked chart, calendar, index table). |
 | `src/lib/` | Ingest math, 8.14.0+ queries, parsers, version gate. |
 
@@ -116,7 +118,7 @@ Use **1.0.1+** of the script. Earlier builds passed the search JSON on argv and 
 
 ## Kibana (optional)
 
-If Kibana already runs on the cluster network, see `kibana/README.md`.
+If Kibana already runs on the cluster network, see `kibana/README.md` and the Kibana-only air-gapped guide [`kibana/docs/kibana-only-airgapped-setup.md`](kibana/docs/kibana-only-airgapped-setup.md).
 
 | Path | Role |
 |------|------|
@@ -125,6 +127,7 @@ If Kibana already runs on the cluster network, see `kibana/README.md`.
 | C Transform | Daily peak-store index `monitoring-ingest-daily` |
 | D Watcher | Exact ingest into `ingest-watch-daily` for Lens (**recommended**) |
 
+Recommended combined task: `kibana/watchers/ingest-watch-daily-combined.json` (template + watch).  
 Watcher setup: `kibana/docs/watcher-setup.md`.
 
 ## Method
