@@ -2,8 +2,10 @@
 
 Daily ingest size from **Stack Monitoring** index stats.
 
-**Supported versions: Elasticsearch 8.14.0 and later** (8.14–8.18, 9.x).
-Dashboard release: **1.0.1**. On-prem / air-gapped pin: **Elasticsearch 8.14.0+** with internal collection `.monitoring-es-*` (verified **8.18.4**).
+**Supported versions: Elasticsearch 8.14.0 and later** (8.14–8.18, 9.x).  
+Dashboard release: **1.0.2**. On-prem / air-gapped pin: **Elasticsearch 8.14.0+** with internal collection `.monitoring-es-*` (verified **8.18.4**).
+
+Start here for a map of every update: **[UPDATES.md](UPDATES.md)** · history: **[CHANGELOG.md](CHANGELOG.md)**
 
 The dashboard computes calendar-day ingest as the day-over-day increase in **primary** store size, floored at zero so ILM deletes and shrinks do not look like negative ingest. Replica copies are excluded.
 
@@ -13,14 +15,15 @@ This is the path for a self-managed cluster with no Elastic Cloud, no package do
 
 | Item | Version / value |
 |---|---|
-| Dashboard | **1.0.1** |
+| Dashboard | **1.0.2** |
 | Elasticsearch | **8.14.0 minimum**, verified **8.18.4**, also 8.14–8.18 and 9.x |
 | Kibana | Same version as Elasticsearch |
 | Collection | **Internal** (built into Elasticsearch) or **Metricbeat** xpack. Both write `.monitoring-es-*`. |
 | Index pattern | `.monitoring-es-*` |
 | Dev Tools query | `queries/daily_ingest_internal.json` |
-| Script | `scripts/daily_ingest_from_monitoring.sh` |
+| Script | `scripts/daily_ingest_from_monitoring.sh` (1.0.1+ temp-file parse) |
 | Script runtime | bash, curl, python3 ≥ 3.6 (RHEL 8 default is enough) |
+| Kibana package | `kibana/` (optional; Watcher Path D for Lens) |
 
 Internal collection is enabled on the cluster (no extra binaries):
 
@@ -54,12 +57,15 @@ See `VERSION` and `ONPREM.md` in the repo root.
 
 | Path | Purpose |
 |---|---|
+| `UPDATES.md` | Organized index of all updates and which tool to use. |
+| `CHANGELOG.md` | Version history (1.0.0 → 1.0.2). |
 | `VERSION` | Pinned dashboard + Elasticsearch versions for on-prem / air-gapped. |
 | `ONPREM.md` | Air-gapped on-prem runbook (ES 8.14.0+ / verified 8.18.4). |
 | `queries/daily_ingest_8.14_unified.json` | Preferred Dev Tools query when both collections exist. Runtime fields unify internal collection and Elastic Agent. |
 | `queries/daily_ingest_internal.json` | `.monitoring-es-*` only (`type=index_stats`). |
 | `queries/daily_ingest_agent.json` | Elastic Agent `metrics-elasticsearch.stack_monitoring.index-*` only. |
 | `scripts/daily_ingest_from_monitoring.sh` | Cluster-side script: search + day-over-day GiB table. |
+| `kibana/` | Kibana-native package (ES|QL, TSVB, transform, Watcher → Lens). |
 | `src/components/dashboard/` | Ingest Watch UI (KPIs, stacked chart, calendar, index table). |
 | `src/lib/` | Ingest math, 8.14.0+ queries, parsers, version gate. |
 
@@ -105,6 +111,21 @@ chmod +x scripts/daily_ingest_from_monitoring.sh
 Optional: `ES_MONITORING_PATTERN` to override the index pattern.
 
 API key needs `monitor` plus `read` on the monitoring indices / data streams.
+
+Use **1.0.1+** of the script. Earlier builds passed the search JSON on argv and failed with `Argument list too long` on large clusters.
+
+## Kibana (optional)
+
+If Kibana already runs on the cluster network, see `kibana/README.md`.
+
+| Path | Role |
+|------|------|
+| A ES|QL | Peak primary store by day (not ingest delta) |
+| B TSVB | Approximate ingest (Max → Terms → Derivative 1d → Positive Only) |
+| C Transform | Daily peak-store index `monitoring-ingest-daily` |
+| D Watcher | Exact ingest into `ingest-watch-daily` for Lens (**recommended**) |
+
+Watcher setup: `kibana/docs/watcher-setup.md`.
 
 ## Method
 
