@@ -36,6 +36,8 @@ Replicas are excluded (primaries only). ILM shrinks/deletes do not become negati
 
 ## Quick start (internal, on-prem)
 
+**Kibana-only air-gapped (recommended):** follow [`docs/kibana-only-airgapped-setup.md`](docs/kibana-only-airgapped-setup.md) — Dev Tools + Saved Objects Import + combined Watcher task + Lens. No Agent/Fleet, no internet downloads, no React app, bash script optional for backfill only.
+
 ### 1. Confirm monitoring data
 
 ```http
@@ -74,7 +76,9 @@ Or import `objects/data-view.ndjson`.
 | **C. Transform + Lens** | Higher | Peak-size tables |
 | **D. Watcher → Lens** | Medium | Exact ingest field for Lens (**recommended**) |
 
-Path D setup: `docs/watcher-setup.md`. Bodies: `watchers/`.
+Path D setup: [`docs/watcher-setup.md`](docs/watcher-setup.md).  
+**Recommended body:** `watchers/ingest-watch-daily-combined.json` (template + watch).  
+Full Kibana-only runbook: [`docs/kibana-only-airgapped-setup.md`](docs/kibana-only-airgapped-setup.md).
 
 ## Importable objects
 
@@ -83,9 +87,10 @@ Path D setup: `docs/watcher-setup.md`. Bodies: `watchers/`.
 | `objects/data-view.ndjson` | Data view for `.monitoring-es-*` |
 | `objects/dashboard-skeleton.ndjson` | Dashboard shell + method notes |
 | `queries/daily_ingest_internal.json` | Dev Tools body (internal) |
-| `watchers/ingest-watch-daily-index.json` | Index template for `ingest-watch-daily` |
-| `watchers/ingest-watch-daily-internal.json` | Daily watch |
+| `watchers/ingest-watch-daily-combined.json` | **Recommended** combined task (template + watch) |
+| `watchers/ingest-watch-daily-index.json` | Index template for `ingest-watch-daily` (also inside combined) |
+| `watchers/ingest-watch-daily-internal.json` | Legacy daily watch (kept for compatibility) |
 
 **Import saved objects:** Kibana → **Stack Management → Saved Objects → Import**.
 
-Keep the GitHub repo script (`ES_COLLECTION=internal`) for CLI reporting and backfill.
+Keep the GitHub repo script (`ES_COLLECTION=internal`) for CLI reporting and optional backfill.
