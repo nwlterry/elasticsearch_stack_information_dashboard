@@ -112,8 +112,7 @@
         "foreach": "ctx.payload.docs",
         "max_iterations": 1000,
         "index": {
-          "index": "ingest-watch-daily",
-          "doc_id": "{{ctx.payload._id}}"
+          "index": "ingest-watch-daily"
         }
       }
     }
