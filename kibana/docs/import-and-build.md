@@ -1,23 +1,26 @@
 # Import and build checklist (Kibana 8.18)
 
-## 1. Import order (Overwrite)
+## Format
+
+All size fields use Lens / data-view **Bytes** with numeral pattern `0.00b` (base **1024**).
+Values auto-scale: B, KB, MB, GB, TB.
+
+Applied on:
+- Data view `Ingest Watch daily` field formats: `ingest_bytes`, `max_primary_bytes`, `prev_primary_bytes`
+- Each Lens metric column: `params.format.id = bytes`, `pattern = 0.00b`
+
+## Import order (Overwrite)
 
 **Stack Management -> Saved Objects -> Import**
 
 1. `objects/data-view-ingest-watch-daily.ndjson`
-2. `objects/lens-visualizations.ndjson` (classic visualizations: metric, histogram, pie, heatmap, table)
+2. `objects/lens-visualizations.ndjson` (type **lens**, same ids `iw-*`)
 3. `objects/dashboard-skeleton.ndjson`
 
-Do not keep the previous Lens library objects (`iw-*` type lens). Overwrite them with this file. Hand-built Lens NDJSON is not accepted as a visualization type on this 8.18.4 cluster (`Visualization type not found`).
+Delete leftover **visualization** objects with the same titles if Overwrite does not replace type visualization -> lens.
 
-Method note is ASCII only.
-
-## 2. Open
+## Open
 
 **Analytics -> Dashboard -> Ingest Watch (Kibana - internal)**
 
-Time range last 30 days. Watcher must have written `ingest-watch-daily`.
-
-## 3. If an old Lens panel still says type not found
-
-Delete saved objects titled Period ingest / Daily cluster ingest / ... of type **lens**, then re-import step 2 and 3.
+Time range last 30 days. Requires `ingest-watch-daily` documents from Watcher.
