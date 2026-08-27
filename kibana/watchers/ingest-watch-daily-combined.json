@@ -1,0 +1,121 @@
+{
+  "metadata": {
+    "dashboard": "1.0.3",
+    "es_min": "8.14.0",
+    "collection": "internal",
+    "watch_id": "ingest-watch-daily-combined",
+    "template_name": "ingest-watch-daily",
+    "destination_index": "ingest-watch-daily",
+    "description": "Combined recommended Watcher task: packages the ingest-watch-daily index template and the daily watch (day-over-day primary-store ingest from .monitoring-es-* index_stats into ingest-watch-daily for Lens). Apply template then watch via Dev Tools; can coexist with legacy ingest-watch-daily-internal."
+  },
+  "index_template": {
+    "index_patterns": ["ingest-watch-daily"],
+    "template": {
+      "settings": {
+        "number_of_shards": 1,
+        "number_of_replicas": 1
+      },
+      "mappings": {
+        "properties": {
+          "@timestamp": { "type": "date" },
+          "day": { "type": "date", "format": "strict_date||strict_date_optional_time" },
+          "index_name": { "type": "keyword" },
+          "stream_family": { "type": "keyword" },
+          "scope": { "type": "keyword" },
+          "max_primary_bytes": { "type": "long" },
+          "max_docs": { "type": "long" },
+          "ingest_bytes": { "type": "long" },
+          "prev_primary_bytes": { "type": "long" },
+          "source": { "type": "keyword" },
+          "collection": { "type": "keyword" }
+        }
+      }
+    }
+  },
+  "watch": {
+    "metadata": {
+      "dashboard": "1.0.3",
+      "es_min": "8.14.0",
+      "collection": "internal",
+      "watch_id": "ingest-watch-daily-combined",
+      "description": "Daily primary-store ingest from .monitoring-es-* index_stats. Writes yesterday per index plus a cluster rollup into ingest-watch-daily for Lens. Part of the combined recommended Watcher task (template + watch)."
+    },
+    "trigger": {
+      "schedule": {
+        "cron": "0 15 1 * * ?"
+      }
+    },
+    "input": {
+      "search": {
+        "request": {
+          "search_type": "query_then_fetch",
+          "indices": [".monitoring-es-*"],
+          "rest_total_hits_as_int": true,
+          "body": {
+            "size": 0,
+            "track_total_hits": false,
+            "timeout": "30s",
+            "query": {
+              "bool": {
+                "filter": [
+                  { "term": { "type": "index_stats" } },
+                  { "range": { "timestamp": { "gte": "now-4d/d", "lt": "now/d" } } }
+                ]
+              }
+            },
+            "aggs": {
+              "indices": {
+                "terms": {
+                  "field": "index_stats.index",
+                  "size": 800,
+                  "order": { "peak_size": "desc" }
+                },
+                "aggs": {
+                  "peak_size": {
+                    "max": { "field": "index_stats.primaries.store.size_in_bytes" }
+                  },
+                  "by_day": {
+                    "date_histogram": {
+                      "field": "timestamp",
+                      "calendar_interval": "1d",
+                      "min_doc_count": 1,
+                      "time_zone": "UTC"
+                    },
+                    "aggs": {
+                      "max_size": {
+                        "max": { "field": "index_stats.primaries.store.size_in_bytes" }
+                      },
+                      "max_docs": {
+                        "max": { "field": "index_stats.primaries.docs.count" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "condition": {
+      "script": {
+        "source": "return ctx.payload.aggregations != null && ctx.payload.aggregations.indices != null && ctx.payload.aggregations.indices.buckets != null && ctx.payload.aggregations.indices.buckets.size() > 0;"
+      }
+    },
+    "transform": {
+      "script": {
+        "source": "String family(String n) { if (n == null) return 'other'; String s = n.toLowerCase(); if (s.contains('.monitoring') || s.contains('stack_monitoring') || s.contains('.kibana') || s.contains('.security') || s.contains('.watcher') || s.contains('.tasks') || s.contains('.async-search') || s.contains('.fleet') || s.contains('elastic_agent')) return 'system'; if (s.contains('apm') || s.contains('traces-') || s.contains('span') || s.contains('transaction')) return 'apm'; if (s.contains('kafka') || s.contains('connect')) return 'kafka'; if (s.contains('metric') || s.contains('prometheus') || s.contains('prom-') || s.contains('vsphere')) return 'metrics'; if (s.contains('logs-') || s.contains('filebeat') || s.contains('winlog') || s.contains('syslog') || s.contains('fluent') || s.contains('vector') || s.contains('iis') || s.contains('openshift') || s.contains('audit')) return 'logs'; return 'other'; } def buckets = ctx.payload.aggregations.indices.buckets; def targetDay = null; def latest = null; for (idx in buckets) { for (d in idx.by_day.buckets) { def day = d.key_as_string.substring(0, 10); if (latest == null || day.compareTo(latest) > 0) latest = day; } } targetDay = latest; def docs = []; def clusterIngest = 0L; def clusterMax = 0L; def clusterDocs = 0L; for (idx in buckets) { def points = []; for (d in idx.by_day.buckets) { def rec = ['day': d.key_as_string.substring(0, 10), 'size': (d.max_size.value == null ? 0L : (long)d.max_size.value), 'docs': (d.max_docs.value == null ? 0L : (long)d.max_docs.value)]; points.add(rec); } points.sort((a, b) -> a.day.compareTo(b.day)); def prev = null; for (p in points) { def delta; if (prev == null) { delta = p.size; } else { def raw = p.size - prev.size; delta = raw > 0L ? raw : 0L; } if (p.day.equals(targetDay)) { def name = idx.key; docs.add(['_id': targetDay + '|' + name, '@timestamp': targetDay + 'T00:00:00Z', 'day': targetDay, 'index_name': name, 'stream_family': family(name), 'scope': 'index', 'max_primary_bytes': p.size, 'max_docs': p.docs, 'ingest_bytes': delta, 'prev_primary_bytes': (prev == null ? 0L : prev.size), 'source': 'watcher', 'collection': 'internal']); clusterIngest += delta; clusterMax += p.size; clusterDocs += p.docs; } prev = p; } } docs.add(['_id': targetDay + '|_cluster', '@timestamp': targetDay + 'T00:00:00Z', 'day': targetDay, 'index_name': '_cluster', 'stream_family': 'cluster', 'scope': 'cluster', 'max_primary_bytes': clusterMax, 'max_docs': clusterDocs, 'ingest_bytes': clusterIngest, 'prev_primary_bytes': 0L, 'source': 'watcher', 'collection': 'internal']); return ['docs': docs, 'target_day': targetDay, 'doc_count': docs.size()];"
+      }
+    },
+    "actions": {
+      "index_each": {
+        "foreach": "ctx.payload.docs",
+        "max_iterations": 1000,
+        "index": {
+          "index": "ingest-watch-daily",
+          "doc_id": "{{ctx.payload._id}}"
+        }
+      }
+    }
+  }
+}
