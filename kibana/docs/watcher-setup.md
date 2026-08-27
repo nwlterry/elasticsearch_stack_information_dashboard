@@ -10,6 +10,8 @@ ingest = max(0, max_primary_store[day] − max_primary_store[day-1])
 
 Internal collection only: `.monitoring-es-*`, `type=index_stats`.
 
+> **Recommended:** use the **combined Watcher task** in `watchers/ingest-watch-daily-combined.json` (index template + watch in one operator file, watch id `ingest-watch-daily-combined`). Full Kibana-only air-gapped runbook: [`kibana-only-airgapped-setup.md`](kibana-only-airgapped-setup.md). Legacy single-watch steps for `ingest-watch-daily-internal` remain below.
+
 ## What the watch writes
 
 Index: `ingest-watch-daily`  
@@ -33,13 +35,15 @@ Reruns overwrite the same `_id`. First-seen index that day uses full primary siz
 
 Watcher is in the default self-managed 8.x distribution (Gold/Platinum not required).
 
-## 2. Create the destination template
+## 2. Create the destination template + put the watch (recommended combined)
+
+Open `watchers/ingest-watch-daily-combined.json`.
 
 ```http
 PUT _index_template/ingest-watch-daily
 ```
 
-Body: `watchers/ingest-watch-daily-index.json`
+Body: the file’s **`index_template`** object (same as `watchers/ingest-watch-daily-index.json`).
 
 Optional first index:
 
@@ -47,7 +51,29 @@ Optional first index:
 PUT ingest-watch-daily
 ```
 
+```http
+PUT _watcher/watch/ingest-watch-daily-combined
+```
+
+Body: the file’s **`watch`** object. Watch id **`ingest-watch-daily-combined`** can coexist with the legacy `ingest-watch-daily-internal`.
+
+### Legacy: template + single watch separately
+
+```http
+PUT _index_template/ingest-watch-daily
+```
+
+Body: `watchers/ingest-watch-daily-index.json`
+
+```http
+PUT _watcher/watch/ingest-watch-daily-internal
+```
+
+Body: `watchers/ingest-watch-daily-internal.json`
+
 ## 3. Put the watch
+
+Prefer §2 combined. For legacy only:
 
 ```http
 PUT _watcher/watch/ingest-watch-daily-internal
@@ -56,6 +82,17 @@ PUT _watcher/watch/ingest-watch-daily-internal
 Body: `watchers/ingest-watch-daily-internal.json`
 
 ## 4. Execute once (do not wait until 01:15)
+
+Combined:
+
+```http
+POST _watcher/watch/ingest-watch-daily-combined/_execute
+{
+  "record_execution": true
+}
+```
+
+Legacy:
 
 ```http
 POST _watcher/watch/ingest-watch-daily-internal/_execute
@@ -76,8 +113,10 @@ GET ingest-watch-daily/_search
 ```
 
 ```http
-GET _watcher/watch/ingest-watch-daily-internal/_stats
+GET _watcher/watch/ingest-watch-daily-combined/_stats
 ```
+
+(or `.../ingest-watch-daily-internal/_stats` for legacy)
 
 ## 5. Lens data view
 
@@ -91,7 +130,7 @@ GET _watcher/watch/ingest-watch-daily-internal/_stats
 
 ## 6. History / backfill
 
-The watch only writes the latest complete day. For 30–90 days:
+The watch only writes the latest complete day. For 30–90 days (optional offline backfill, not required for Kibana-only setup):
 
 ```bash
 export ES_COLLECTION=internal
@@ -100,10 +139,21 @@ export ES_COLLECTION=internal
 
 ## 7. Disable / delete
 
+Combined:
+
+```http
+PUT _watcher/watch/ingest-watch-daily-combined/_deactivate
+DELETE _watcher/watch/ingest-watch-daily-combined
+```
+
+Legacy:
+
 ```http
 PUT _watcher/watch/ingest-watch-daily-internal/_deactivate
 DELETE _watcher/watch/ingest-watch-daily-internal
 ```
+
+If both were installed, deactivate the unused one so only one watch writes `ingest-watch-daily`.
 
 ## Caveats
 
