@@ -49,6 +49,7 @@ Also see `UPDATES.md` and `kibana/README.md`.
 
 - Fast charts: TSVB derivative (`kibana/docs/tsvb-setup.md`) — optional
 - Exact Lens field: Watcher Path D (`kibana/docs/watcher-setup.md`) writes `ingest-watch-daily` — **recommended** via the combined task file
+- Build Lens panels like the React app: `kibana/docs/lens-setup.md` (import fixed `dashboard-skeleton.ndjson` — issue #3)
 
 Watcher and transform write new indices. The script and Dev Tools query do not.
 

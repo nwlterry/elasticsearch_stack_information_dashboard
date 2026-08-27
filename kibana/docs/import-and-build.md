@@ -4,48 +4,45 @@
 
 **Stack Management → Saved Objects → Import**
 
-- `objects/data-view.ndjson`
-- `objects/dashboard-skeleton.ndjson`
+- `objects/data-view-ingest-watch-daily.ndjson` — Lens data view (`ingest-watch-daily`, `@timestamp`)
+- `objects/data-view.ndjson` — optional `.monitoring-es-*` view
+- `objects/dashboard-skeleton.ndjson` — dashboard shell
 
-If the data view already exists for `.monitoring-es-*`, skip or overwrite carefully.
+If an older skeleton is already imported, choose **Overwrite**.
+
+The method panel is type **`visualization`** (markdown vis). Panel type `markdown` is not registered on 8.18.4 and fails with `No embeddable factory found for type: markdown` (issue #3).
 
 ## 2. Open the dashboard
 
 **Analytics → Dashboard → Ingest Watch (Kibana · internal)**
 
-You should see the method markdown panel and a default KQL filter `type: index_stats`.
+You should see the method note (React ↔ Lens map). Time range defaults to last 30 days.
 
-## 3. Add TSVB visualizations (Path B)
+## 3. Add Lens panels (Path D — recommended)
 
-Follow `tsvb-setup.md` and add panels to this dashboard:
+Watcher must have written `ingest-watch-daily` first.
 
-1. Cluster daily ingest (time series)  
-2. Top indices table  
-3. Period KPI metric  
+Follow **`docs/lens-setup.md`** so the Kibana dashboard matches the React Ingest Watch app:
 
-Save each to the Visualize Library, then **Add from library** on the dashboard.
+1. Period KPI — Metric, `scope: cluster`, Sum `ingest_bytes`
+2. Daily bar — `@timestamp` 1d, `scope: cluster`
+3. Stacked family — `scope: index`, break down `stream_family`
+4. Family donut — `scope: index`
+5. Heatmap — closest native calendar
+6. Index table — `index_name` + Sum `ingest_bytes`
 
-## 4. Optional runtime field
+## 4. Optional TSVB (Path B, no Watcher index)
 
-Add `stream_family` per `runtime-family.md` on the data view, then create a stacked bar broken down by family (after you have a workable ingest metric).
+Follow `tsvb-setup.md` only if you cannot run Watcher. That path approximates ingest from `.monitoring-es-*` and will not match the React numbers as closely as Path D.
 
-## 5. Optional transform
+## 5. Optional runtime field on `.monitoring-es-*`
 
-```bash
-# From a host that can reach Elasticsearch
-curl -sS -u elastic -H 'Content-Type: application/json' \
-  -X PUT "$ES_URL/_transform/monitoring-daily-index-store-max" \
-  -d @transforms/daily_index_store_max.json
-
-curl -sS -u elastic -X POST "$ES_URL/_transform/monitoring-daily-index-store-max/_start"
-```
-
-Create a second data view on `monitoring-ingest-daily` for peak-size tables.
+Add `stream_family` per `runtime-family.md` only for TSVB/ES|QL on monitoring indices. Path D already stores `stream_family` on `ingest-watch-daily`.
 
 ## 6. Spaces / roles
 
-Put the dashboard in the observability space. Role needs read on `.monitoring-es-*` and the dashboard objects.
+Put the dashboard in the observability space. Role needs `read` on `ingest-watch-daily` and the saved objects. Watcher write privileges are only for the account that PUT/_execute the watch.
 
 ## Parity note
 
-The React app's full UX (paste JSON, family toggles, calendar) will not appear as a single import. This package gives **native Kibana** access to the **same metric definition** for internal collection on your 8.18 cluster.
+The React app (paste JSON, range toggles, true calendar grid) is not an importable Kibana object. This package gives **native Kibana Lens** panels on the **same ingest field** the React app computes.
