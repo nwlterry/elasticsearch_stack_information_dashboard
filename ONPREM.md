@@ -1,18 +1,19 @@
 # On-prem air-gapped version
 
-**Dashboard 1.0.1** for self-managed Elasticsearch **without internet**.
+**Dashboard 1.0.2** for self-managed Elasticsearch **without internet**.
 
 | Pin | Value |
 |---|---|
-| Dashboard | 1.0.1 |
+| Dashboard | 1.0.2 |
 | Elasticsearch | **8.14.0** minimum, verified **8.18.4** |
 | Also supported | 8.14–8.18 and 9.x |
 | Kibana | Same version as Elasticsearch |
 | Collection | Internal (built-in) or Metricbeat xpack |
 | Index | `.monitoring-es-*` |
 | Query | `queries/daily_ingest_internal.json` |
-| Script | `scripts/daily_ingest_from_monitoring.sh` |
+| Script | `scripts/daily_ingest_from_monitoring.sh` (1.0.1+ temp-file parse) |
 | Host tools | bash, curl, python3 ≥ 3.6 |
+| Kibana (optional) | `kibana/` — TSVB, ES|QL, Watcher Path D |
 
 No Elastic Agent, Fleet, or package registry is required.
 
@@ -39,8 +40,17 @@ chmod +x scripts/daily_ingest_from_monitoring.sh
 
 Or in Kibana Dev Tools, run `queries/daily_ingest_internal.json` against `.monitoring-es-*`.
 
+## If Kibana is already on the network
+
+Use `kibana/` (see `UPDATES.md` and `kibana/README.md`).
+
+- Fast charts: TSVB derivative (`kibana/docs/tsvb-setup.md`)
+- Exact Lens field: Watcher Path D (`kibana/docs/watcher-setup.md`) writes `ingest-watch-daily`
+
+Watcher and transform write new indices. The script and Dev Tools query do not.
+
 ## Copy to an air-gapped site
 
-Download the on-prem zip from the [v1.0.1 release](https://github.com/nwlterry/elasticsearch_stack_information_dashboard/releases/tag/v1.0.1) on a connected machine, then copy it in. The zip contains `VERSION`, this runbook, the three queries, and the script. It does not need Node.js or npm.
+Copy the repo (or the v1.0.1 zip plus the `kibana/` tree from main) onto an isolated host. The script path does not need Node.js or npm.
 
 Internal monitoring is removed in Elasticsearch **10.0**. Stay on 8.x or 9.x for this path.

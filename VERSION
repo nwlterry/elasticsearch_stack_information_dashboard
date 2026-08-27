@@ -1,10 +1,7 @@
 # elasticsearch_stack_information_dashboard
 # On-prem / air-gapped pin (no internet required at runtime)
 
-# elasticsearch_stack_information_dashboard
-# On-prem / air-gapped pin (no internet required at runtime)
-
-dashboard=1.0.1
+dashboard=1.0.2
 elasticsearch_min=8.14.0
 elasticsearch_verified=8.18.4
 elasticsearch_max_internal_collection=9.x
@@ -14,13 +11,6 @@ onprem_index_pattern=.monitoring-es-*
 onprem_query=queries/daily_ingest_internal.json
 script=scripts/daily_ingest_from_monitoring.sh
 script_runtime=bash,curl,python3>=3.6
-
-elasticsearch_min=8.14.0
-elasticsearch_verified=8.18.4
-elasticsearch_max_internal_collection=9.x
-kibana=same as Elasticsearch
-onprem_collection=internal
-onprem_index_pattern=.monitoring-es-*
-onprem_query=queries/daily_ingest_internal.json
-script=scripts/daily_ingest_from_monitoring.sh
-script_runtime=bash,curl,python3>=3.6
+kibana_package=kibana/
+watcher=kibana/watchers/ingest-watch-daily-internal.json
+watcher_dest=ingest-watch-daily
