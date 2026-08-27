@@ -1,36 +1,23 @@
 # Import and build checklist (Kibana 8.18)
 
-## 1. Import (required order)
+## 1. Import order (Overwrite)
 
 **Stack Management -> Saved Objects -> Import**
 
-1. `objects/data-view-ingest-watch-daily.ndjson` (create first so Lens refs resolve)
-2. `objects/dashboard-skeleton.ndjson` (Overwrite). Includes method note + Lens panels.
-3. Optional: `objects/data-view.ndjson` for `.monitoring-es-*`
+1. `objects/data-view-ingest-watch-daily.ndjson`
+2. `objects/lens-visualizations.ndjson` (classic visualizations: metric, histogram, pie, heatmap, table)
+3. `objects/dashboard-skeleton.ndjson`
 
-Method note is ASCII only (no em-dash / minus / multiply glyphs). Title is `Ingest Watch (Kibana - internal)`.
+Do not keep the previous Lens library objects (`iw-*` type lens). Overwrite them with this file. Hand-built Lens NDJSON is not accepted as a visualization type on this 8.18.4 cluster (`Visualization type not found`).
 
-Imported Lens panels (data view `Ingest Watch daily`):
-
-- Period ingest (metric, scope: cluster)
-- Daily cluster ingest (bar, 1d)
-- Daily ingest by family (stacked bar)
-- Family share (donut)
-- Daily ingest heatmap
-- Ingest by index (table)
-
-Watcher must have written `ingest-watch-daily` or panels are empty.
+Method note is ASCII only.
 
 ## 2. Open
 
 **Analytics -> Dashboard -> Ingest Watch (Kibana - internal)**
 
-Time range last 30 days. If a Lens panel says missing data view, import the data-view NDJSON first, then re-import the dashboard with Overwrite.
+Time range last 30 days. Watcher must have written `ingest-watch-daily`.
 
-## 3. Optional TSVB
+## 3. If an old Lens panel still says type not found
 
-`tsvb-setup.md` only if Watcher cannot run.
-
-## Parity
-
-Same ingest field as the React app. Hourly chart is not imported (Watcher is daily).
+Delete saved objects titled Period ingest / Daily cluster ingest / ... of type **lens**, then re-import step 2 and 3.
